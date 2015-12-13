@@ -1,0 +1,95 @@
+
+# Catchment polygons shapefile created with ArcHydro
+# Refer to arcHydroNotes.docx for instructions on how to create
+
+catchmentFileDir	/Users/hoy/Desktop/MSUWC/Data/Shapefiles/GYE_Cathments_Clipped/
+catchmentFileName	GYE_Cathments_Clipped
+
+# DrainageLine shapefile created with ArcHydro
+# Refer to arcHydroNotes.docx for instructions on how to create
+edgeFileDir	/Users/hoy/Desktop/MSUWC/Data/Shapefiles/GYE_DrainageLine2/
+edgeFileName	GYE_DrainageLine2
+
+# LPJ-Guess outputs of surface and subsurface runoff
+ncdir	/Users/hoy/Desktop/MSUWC/Data/DriverData/Output_GYE_RoughCut_2050/
+surfaceNcName	GYE_RoughCut_2050_stand_monthly_msro.nc
+subNcName	GYE_RoughCut_2050_stand_monthly_mssro.nc
+snowpackNcName	GYE_RoughCut_2050_stand_monthly_spack.nc
+precipNcName 	GYE_RoughCut_2050_stand_monthly_prcp.nc
+
+# NWIS gauge locations point shapefile
+# Refer to arcHydroNotes.docx for instructions on how to create
+nwisGaugeDir	/Users/hoy/Desktop/MSUWC/Data/Shapefiles/nwisGauges/
+nwisGaugeFname	NWISMapperExport
+
+###########
+# Set edge and catchment table field names
+###########
+
+# Set the names of the edge fields to be used
+edgeIdField	DrainID
+edgeOrderField	RiverOrder
+edgeLengthField	Shape_Leng
+edgeAreaField	Shape_Ar_1
+edgeHucField	HUC10
+edgeNextDownField	NextDown_2
+edgeSlopeFieldDeg	SLOPE
+
+
+# Set the names of the catchment fields to be used
+catchAreaField	Shape_Area
+catchIdField	HydroID
+catchNextDownField	NextDownID
+catchOrderField	RiverOrder
+catchHucField	 #unnessary if subsetting with edges
+
+## Note: edgeIdField and catchIdField are linked and must be the same for corresponding edges and nodes
+
+
+###########
+# Set simulations information
+##########
+
+timeStep	month # month or day
+surfaceVarName	msro
+subsurfVarName	mssro
+snowpackVarName	
+precipVarName	
+
+
+simStartDate	1980-01-01
+simEndDate	2050-12-31
+
+##########
+# Set routing parameters
+##########
+streamWidthCoeffs	c(.3, .6)
+manningN	.01
+slopeMin	.01
+aCoeffCoeff	2
+
+#########
+# Set other function parameters
+#########
+
+aggregatePrecip	F
+
+# If you want to select by HUC10 code, set to T
+# If you want to selct by edgeID, set to F
+subsetEdgesCatchs	T
+selectByHuc	F
+
+hucCodes	c(1007000105, 1007000106)
+
+# If selecting by edgeID, fill out, otherwise, continue
+edgeIds	c(16716, 23917)
+edgeIds	c(21647)
+
+# If you want to aggregate all runoff data at once, set to T
+aggregateAllCatchments	T
+
+# If you want to aggregate gauge data by month, set to T
+aggregateGaugeDataByMonth	T
+
+# If you want to save all plots as png's, set to T
+saveHydrographs	F
