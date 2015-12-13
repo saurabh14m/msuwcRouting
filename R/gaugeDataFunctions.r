@@ -24,61 +24,68 @@
 
 cleanDat <- function(dat, simStartDate, simEndDate){
 
+	dat <<- as.data.frame(dat)
+
+	simStartDate <- as.Date(simStartDate)
+	simEndDate <- as.Date(simEndDate)
+	dat[,1] <- as.Date(dat[,1])
+
     #Erases data befor start date
-    if(as.Date(dat[1,1]) < as.Date(simStartDate)){
-	print("Erasing beginning")
-        dat <- dat[-c(which(dat[,1] < as.Date(simStartDate))),]
+    if(dat[1,1] < simStartDate){
+		print("Erasing beginning")
+        dat <- dat[-c(which(dat[,1] < simStartDate)),]
     }
 
     # Erases data after end date
-    if(as.Date(tail(dat[,1], n=1L)) > as.Date(simEndDate)){
-	print("Erasing end data")
-        dat <- dat[-c(which(dat[,1] > as.Date(simEndDate))),]
+    if(tail(dat[,1], n=1L) > simEndDate){
+		print("Erasing end data")
+        dat <- dat[-c(which(dat[,1] > simEndDate)),]
     }
 
     # Fills in beginning if with NAs
-    if(as.Date(dat[1,1]) > as.Date(simStartDate)){
-	print("Filling in beginning")
-        d <- as.character(seq(as.Date(simStartDate), as.Date(dat[1,1]), by="day"))
-	d <- d[1:(length(d)-1)]
-	d <- data.frame(d, NA)
-	names(d) <- names(dat)
-	dat <- rbind(d, dat)
+    if(dat[1,1] > simStartDate){
+		print("Filling in beginning")
+        d <- seq(simStartDate, dat[1,1], by="day")
+		#print(d)
+		d <- d[1:(length(d)-1)]
+		d <- data.frame(d, NA)
+		names(d) <- names(dat)
+		dat <- rbind(d, dat)
     }
 
     # Fills in end with NAs
-    if(as.Date(tail(dat[,1], n=1L)) < as.Date(simEndDate)){
-	print("Filling in end data")
-        # Fills in missing end
-        d <- as.character(seq(as.Date(tail(dat[,1], n=1L)), as.Date(simEndDate), by="day"))[-1]
-	d <- data.frame(d, NA)
-	names(d) <- names(dat)
-	dat <- rbind(dat, d)
-	print("Filled in end data")
+    if(tail(dat[,1], n=1L) < simEndDate){
+		print("Filling in end data")
+        d <- seq(tail(dat[,1], n=1L), simEndDate, by="day")[-1]
+		d <- data.frame(d, NA)
+		names(d) <- names(dat)
+		dat <- rbind(dat, d)
+		print("Filled in end data")
     }
 
     i <- 1
     a <- nrow(dat)
     while(i < a){
-	# Fills in holes in data with NAs 
-	if(as.Date(dat[i+1, 1]) != as.Date(seq(as.Date(dat[i,1]), by="day", length=2)[2])){
+		# Fills in holes in data with NAs 
+		if(dat[i+1, 1] != seq(dat[i,1], by="day", length=2)[2]){
 
-	    print(paste("Data missing after", dat[i,1]))
-            d <- as.character(seq(as.Date(dat[i,1]), as.Date(dat[i+1, 1]), by="day"))
-	    d <- d[-c(1, length(d))]
-	    d <- data.frame(d, NA)
-	    names(d) <- names(dat)
-	    dat <- rbind(dat[1:i, ], d, dat[(i+1):nrow(dat), ])
-	    i <- i+nrow(d)+1
-	    a <- nrow(dat)
-	    next
-	}
-	i <- i+1
+			print(paste("Data missing after", dat[i,1]))
+			d <- seq(dat[i,1], dat[i+1, 1], by="day")
+			d <- d[-c(1, length(d))]
+			d <- data.frame(d, NA)
+			names(d) <- names(dat)
+			dat <- rbind(dat[1:i, ], d, dat[(i+1):nrow(dat), ])
+			i <- i+nrow(d)+1
+			a <- nrow(dat)
+			next
+		}
+
+		i <- i+1
     }
     
 
     if(length(grep("02-29", dat[,1])) > 0){
-	dat <- dat[-c(grep("02-29", dat[,1])),]
+		dat <- dat[-c(grep("02-29", dat[,1])),]
     }
 
 
