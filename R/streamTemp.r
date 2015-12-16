@@ -53,6 +53,7 @@ StreamTemp <- function(edges, catchments, RsurfSnow, RsurfNoSnow, Tair, simFlow,
 	lengthKM <- edges[, defaults$edgeLengthField] * 120
 
 	edges[,idField] <- as.character(edges[, idField])
+	edges[,nextDownField] <- as.character(edges[, nextDownField])
 
     # Set the timeLength to run simulation
 	runStop <- ifelse(is.null(runStop), nrow(simFlow[[1]]), runStop)
@@ -68,11 +69,6 @@ StreamTemp <- function(edges, catchments, RsurfSnow, RsurfNoSnow, Tair, simFlow,
 
 	simFlow <- lapply(simFlow, function(x) x[runStart:runStop,match(edges[, idField], colnames(x))])	
 
-	#########
-	## Need to subset all of simflow for faster computation
-	#####
-
-
     timeLength <- length(runStart:runStop)
     # Create seed matrix to use for storing data in results
 
@@ -87,6 +83,7 @@ StreamTemp <- function(edges, catchments, RsurfSnow, RsurfNoSnow, Tair, simFlow,
         TwaterLocal = seedMatrix,
         TwaterLocalWarmed = seedMatrix,
         TwaterQin = seedMatrix,
+        TwaterUpstream = seedMatrix,
         TwaterSriv = seedMatrix,
         kRsQsub= seedMatrix,
         kQIn = seedMatrix,
@@ -114,21 +111,15 @@ StreamTemp <- function(edges, catchments, RsurfSnow, RsurfNoSnow, Tair, simFlow,
 	
 
     
+	orders <- edges[, defaults$edgeOrderField] 
+	ids <- edges[, idField]
+
 
 	stepsLooped <- 0
 	start <- as.numeric(format(Sys.time(), "%s"))
 
-	edges <- data.table(edges)
-	setkeyv(edges, idField)
 
-	orders <- edges[, defaults$edgeOrderField] 
-	ids <- edges[, idField]
-
-	print(class(edges))
-	a <- edges[defaults$edgeOrderField > 1, idField]
-	parentList <- lapply(a, function(x) {as.character(edges[NextDownField <- 2 == x, idField])})
-	names(parentList) <- a
-	rm(a)
+	parentList <- lapply(edges[,idField], function(x) {which(edges[,nextDownField] == x)})
 
     print("About to Run")
 
@@ -149,29 +140,29 @@ StreamTemp <- function(edges, catchments, RsurfSnow, RsurfNoSnow, Tair, simFlow,
 
 
 			
-			v <- velocities[timeStep, hydroID] ##m/s ##NEED to convert to m/month if month
+			v <- velocities[timeStep, i] ##m/s ##NEED to convert to m/month if month
 
 			len <- lengthKM[i]
 			
-			qSnow <- RsurfSnow[timeStep, hydroID]
-			qNoSnow <- RsurfNoSnow[timeStep, hydroID]
+			qSnow <- RsurfSnow[timeStep, i]
+			qNoSnow <- RsurfNoSnow[timeStep, i]
 
-			qGw <- simFlow$qSub[timeStep, hydroID]
-			qOut <- simFlow$qOut[timeStep, hydroID]
-			qIn <- simFlow$qIn[timeStep, hydroID]
+			qGw <- simFlow$qSub[timeStep, i]
+			qOut <- simFlow$qOut[timeStep, i]
+			qIn <- simFlow$qIn[timeStep, i]
 
 			Tgw <- annualTmean[timeStep]+1.5 ###often 1-2*C higher than mean annual air temperature of a region, annual time series
 
 			if(timeStep > 1){
-				TwaterOld <- results$Twater[timeStep - 1, hydroID] 
-				sRiv <- simFlow$sRiv[timeStep - 1, hydroID]
+				TwaterOld <- results$Twater[timeStep - 1, i] 
+				sRiv <- simFlow$sRiv[timeStep - 1, i]
 
 			} else {
 				TwaterOld <- 0
 				sRiv <- 0
 			}
 
-			TairLocal <- Tair[timeStep, hydroID]
+			TairLocal <- Tair[timeStep, i]
 
 			if(by == "month"){
 				TairLag <- TairLocal
@@ -215,28 +206,26 @@ StreamTemp <- function(edges, catchments, RsurfSnow, RsurfNoSnow, Tair, simFlow,
 
 			} else {
 				#May need to calculated weighted temperatures
-				qInUpstream <- simFlow$qOut[timeStep, parentList[[hydroID]]]
+				qInUpstream <- simFlow$qOut[timeStep, parentList[[i]]]
 
-				TwaterUpstream <- results$Twater[timeStep, parentList[[hydroID]]]
+				TwaterUpstream <- results$Twater[timeStep, parentList[[i]]]
 
 				#print(TwaterIn)
 				#print(qInUpstream)
 				#print(TwaterUpstream)
 				#print(length(TwaterUpstream))
 
+
 				if(any(sapply(c(qInUpstream, TwaterUpstream), function(x) is.nan(x)))){
 					stop()
 				}
 				
-				if(length(TwaterUpstream) == 0 | length(qInUpstream) == 0){
+				if(length(qInUpstream) == 0){
 					TwaterUpstream <- 0
-
 				} else if(sum(qInUpstream) == 0){
-
 					TwaterUpstream <- 0
 
 				} else {
-					
 					TwaterUpstream <- sum(qInUpstream*TwaterUpstream)/sum(qInUpstream)
 
 				}
@@ -248,7 +237,7 @@ StreamTemp <- function(edges, catchments, RsurfSnow, RsurfNoSnow, Tair, simFlow,
 
 
 
-			if(len/v < 1){
+			if(len/v <= 1){
 
 				rSqSubTT <- len/(2*v) ##
 				sRivTT <- len/(2*v)
@@ -267,7 +256,7 @@ StreamTemp <- function(edges, catchments, RsurfSnow, RsurfNoSnow, Tair, simFlow,
 				sRivTT <- 1 - v/len
 			}
 
-			#reachTravelTime <- simFlow$TT[timeStep, hydroID] ## TT (hour) travel time of water through the subbasain 
+			#reachTravelTime <- simFlow$TT[timeStep, i] ## TT (hour) travel time of water through the subbasain 
 
 			## Need to modify k ##
 
@@ -304,12 +293,12 @@ StreamTemp <- function(edges, catchments, RsurfSnow, RsurfNoSnow, Tair, simFlow,
 			Twater <- ifelse(Twater < 0, .1, Twater)
 
 			# Store values in results list
-			results$Twater[timeStep, hydroID] <- Twater
+			results$Twater[timeStep, i] <- Twater
 
 
 			if(debugMode == T | !is.null(outFile)){
 				try(c(
-					print(paste("Day:",timeStep, "Edge:", hydroID, "Order:", ord)),
+					print(paste("Day:",timeStep, "Edge:", i, "Order:", ord)),
 
 					print(paste0("v = ", v)),
 					print(paste0("len = ", len)),
@@ -347,13 +336,14 @@ StreamTemp <- function(edges, catchments, RsurfSnow, RsurfNoSnow, Tair, simFlow,
 			}
 
 			if(outputExtraVars){
-				results$TwaterLocal[timeStep, hydroID] <- TwaterLocal
-				results$TwaterLocalWarmed[timeStep, hydroID] <- TwaterLocalWarmed
-				results$TwaterQin[timeStep, hydroID] <- TwaterQin
-				results$TwaterSriv[timeStep, hydroID] <- TwaterSriv
-				results$kRsQsub[timeStep, hydroID] <- K*rSqSubTT
-				results$kQIn[timeStep, hydroID] <- K*qInTT
-				results$kQsRiv[timeStep, hydroID] <- K*sRivTT
+				results$TwaterLocal[timeStep, i] <- TwaterLocal
+				results$TwaterLocalWarmed[timeStep, i] <- TwaterLocalWarmed
+				results$TwaterQin[timeStep, i] <- TwaterQin
+				results$TwaterUpstream[timeStep, i] <- TwaterUpstream
+				results$TwaterSriv[timeStep, i] <- TwaterSriv
+				results$kRsQsub[timeStep, i] <- K*rSqSubTT
+				results$kQIn[timeStep, i] <- K*qInTT
+				results$kQsRiv[timeStep, i] <- K*sRivTT
 			}
 			
 

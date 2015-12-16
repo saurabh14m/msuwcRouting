@@ -3,13 +3,17 @@ using namespace Rcpp;
 
 
 // [[Rcpp::export]]
-NumericMatrix streamTempLoop(int timeLength, CharacterVector edgeIDs, IntegerVector orders, NumericMatrix velocities, NumericVector lengths, NumericMatrix RsurfSnow, NumericMatrix RsurfNoSnow, NumericMatrix flowqSub, NumericMatrix flowqOut, NumericMatrix flowqIn, NumericMatrix flowsRiv, NumericVector annualTmean, String by, List parentList, double K){
+List streamTempLoop(int timeLength, CharacterVector edgeIDs, IntegerVector orders, NumericMatrix velocities, NumericVector lengths, NumericMatrix RsurfSnow, NumericMatrix RsurfNoSnow, NumericMatrix flowqSub, NumericMatrix flowqOut, NumericMatrix flowqIn, NumericMatrix flowsRiv, NumericVector annualTmean, String by, List parentList, double K, NumericMatrix Tair){
 
-	NumericMatrix Twater(timeLength, edgeIDs.size())
+	NumericMatrix Twater(timeLength, edgeIDs.size());
+	NumericMatrix TwUpstream(timeLength, edgeIDs.size());
+	NumericMatrix TwLocal(timeLength, edgeIDs.size());
 
-	for(int timeStep=0; timeStep < timeLength; i++){
+	double stepsLooped = 0;
 
-	  for(int i=0; i < edgeIDs.size(), i++){
+	for(int timeStep=0; timeStep < timeLength; timeStep++){
+
+	  for(int i=0; i < edgeIDs.size(); i++){
 
 		  int ord = orders[i];
 
@@ -24,21 +28,22 @@ NumericMatrix streamTempLoop(int timeLength, CharacterVector edgeIDs, IntegerVec
 			  
 		  double Tgw = annualTmean[timeStep] + 1.5;
 
+		  double TwaterOld = 0;
+		  double sRiv = 0;
 
 		  if(timeStep > 0){
-			  double TwaterOld = Twater(timeStep - 1, i);
-			  double sRiv = flowsRiv(timeStep - 1, i);
-		  } else {
-			  double TwaterOld = 0;
-			  double sRiv = 0;
+			  TwaterOld = Twater(timeStep - 1, i);
+			  sRiv = flowsRiv(timeStep - 1, i);
 		  }
 
 		  double TairLocal = Tair(timeStep, i);
 
+		  double TairLag;
+		  double lamda;
 
 		  if(by == "month"){
-			  double TairLag = TairLocal;
-			  double lamda = 1.0;
+			  TairLag = TairLocal;
+			  lamda = 1.0;
 		  } else {
 			  //print(" by == day ??")
 			  //TairLag //### Need to make some sort of lag for daily air temp
@@ -52,7 +57,7 @@ NumericMatrix streamTempLoop(int timeLength, CharacterVector edgeIDs, IntegerVec
 		  double TwaterLocal = 0;
 
 		  if(qLocal > 0){
-			  TwaterLocal = ((Tsnow*qSnow)+(Tgw*qGw)+(lamda*TairLag)*qNoSnow)/qLocal;
+			  TwaterLocal = ((0.1*qSnow)+(Tgw*qGw)+(lamda*TairLag)*qNoSnow)/qLocal;
 		  }
 
 		  double TwaterUpstream = 0;
@@ -68,9 +73,9 @@ NumericMatrix streamTempLoop(int timeLength, CharacterVector edgeIDs, IntegerVec
 
 				  for(int j=0; j < parents.size(); j++){
 
-					  double qInUp = flowqOut(timeStep, parents[j]);
+					  double qInUp = flowqOut(timeStep, parents[j]-1);
 
-					  TWeight += Twater(timeStep, parents[j]) * qInUp;
+					  TWeight += Twater(timeStep, parents[j]-1) * qInUp;
 
 					  qInUpstream += qInUp;
 				  }
@@ -85,6 +90,7 @@ NumericMatrix streamTempLoop(int timeLength, CharacterVector edgeIDs, IntegerVec
 		  double sRivTT;
 		  double qInTT = 0;
 
+
 		  if(len/v <= 1){
 
 			rSqSubTT = len/(2*v);
@@ -97,18 +103,18 @@ NumericMatrix streamTempLoop(int timeLength, CharacterVector edgeIDs, IntegerVec
 
 		  } else {
 			//print("len/v > 1????")
-			qInTT = 0;
 			rSqSubTT = 1-v/(2*len);
 			sRivTT = 1 - v/len;
 		  }
 
-		  double rSqSubCoeff = 1;
-		  double sRivCoeff = 1;
-		  double qInCoeff = 1;
+		  double rSqSubCoeff = 1.0;
+		  double sRivCoeff = 1.0;
+		  double qInCoeff = 1.0;
 
 		  if(rSqSubTT*K < 1){
 			rSqSubCoeff = rSqSubTT*K;
 		  }
+
 		  if(sRivTT*K < 1){
 			sRivCoeff = sRivTT*K;
 		  }
@@ -127,14 +133,17 @@ NumericMatrix streamTempLoop(int timeLength, CharacterVector edgeIDs, IntegerVec
 		  //#A function of travel time and shading, given a large enough travel time, it should be close to one
 
 		  //if(TairLocal > 0){
-		  if(true){
+		  //
+
+
+		  //if(true){
 			  double TwaterLocalWarmed = TwaterLocal + (TairLocal - TwaterLocal)*rSqSubCoeff;
 			  double TwaterQin = TwaterUpstream + (TairLocal - TwaterUpstream)*qInCoeff;
 			  double TwaterSriv = TwaterOld + (TairLocal - TwaterOld)*sRivCoeff;
 
 			//###OLD Twater code
 			//Twater = TwaterInitial + (TairLocal - TwaterInitial) * K * reachTravelTime
-		  } else {
+		  //} else {
 			//epsilon = 2.5 //###Set to 2.5*C before sensitivity testing
 
 			//TwaterLocalWarmed = TwaterLocal + ((TairLocal + epsilon) - TwaterLocal)*K*rSqSubTT
@@ -143,28 +152,33 @@ NumericMatrix streamTempLoop(int timeLength, CharacterVector edgeIDs, IntegerVec
 
 			//TwaterSriv = TwaterOld + ((TairLocal + epsilon) - TwaterOld)*K*sRivTT
 			//##Twater = TwaterInitial + ((TairLocal + epsilon) - TwaterInitial) * K * (reachTravelTime)
-		  }
+		  //}
 
-		  if(qIn == 0 && qLocal == 0 && sRiv == 0){
-			double TwaterEdge = 0;
-		  } else {
-			double TwaterEdge = (TwaterQin*qIn + TwaterLocalWarmed*qLocal + TwaterSriv*sRiv)/(qIn+qLocal+sRiv);
+		  double TwaterEdge = 0;
+
+		  if(qIn != 0 || qLocal != 0 || sRiv != 0){
+			TwaterEdge = (TwaterQin*qIn + TwaterLocalWarmed*qLocal + TwaterSriv*sRiv)/(qIn+qLocal+sRiv);
 		  }
 
 		  if(TwaterEdge < 0){
 			TwaterEdge = .1;
 		  }
 
+		  //Rcpp::Rcout << "TwaterEdge: " << TwaterEdge << std::endl;
+
 		  // Store values in results list
-		  Twater(timeStep, i) = Twater;
+		  Twater(timeStep, i) = TwaterEdge;
+		  TwUpstream(timeStep, i) = TwaterUpstream;
+		  TwLocal(timeStep, i) = TwaterLocal;
 
 
 
 
 		  //if(Twater > 50) stop()
 
-	  }
+		  stepsLooped++;
 	  }
 	}
-	return Twater
+	Rcpp::Rcout << "Steps Looped: " << stepsLooped << std::endl;
+	return List::create(Twater, TwUpstream, TwLocal);
 }
