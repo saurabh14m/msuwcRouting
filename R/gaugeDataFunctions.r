@@ -42,27 +42,6 @@ cleanDat <- function(dat, simStartDate, simEndDate){
         dat <- dat[-c(which(dat[,1] > simEndDate)),]
     }
 
-    # Fills in beginning if with NAs
-    if(dat[1,1] > simStartDate){
-		print("Filling in beginning")
-        d <- seq(simStartDate, dat[1,1], by="day")
-		#print(d)
-		d <- d[1:(length(d)-1)]
-		d <- data.frame(d, NA)
-		names(d) <- names(dat)
-		dat <- rbind(d, dat)
-    }
-
-    # Fills in end with NAs
-    if(tail(dat[,1], n=1L) < simEndDate){
-		print("Filling in end data")
-        d <- seq(tail(dat[,1], n=1L), simEndDate, by="day")[-1]
-		d <- data.frame(d, NA)
-		names(d) <- names(dat)
-		dat <- rbind(dat, d)
-		print("Filled in end data")
-    }
-
     i <- 1
     a <- nrow(dat)
     while(i < a){
@@ -83,6 +62,26 @@ cleanDat <- function(dat, simStartDate, simEndDate){
 		i <- i+1
     }
     
+    # Fills in beginning if with NAs
+    if(dat[1,1] > simStartDate){
+		print("Filling in beginning")
+        d <- seq(simStartDate, dat[1,1], by="day")
+		#print(d)
+		d <- d[1:(length(d)-1)]
+		d <- data.frame(d, NA)
+		names(d) <- names(dat)
+		dat <- rbind(d, dat)
+    }
+
+    # Fills in end with NAs
+    if(tail(dat[,1], n=1L) < simEndDate){
+		print("Filling in end data")
+        d <- seq(tail(dat[,1], n=1L), simEndDate, by="day")[-1]
+		d <- data.frame(d, NA)
+		names(d) <- names(dat)
+		dat <- rbind(dat, d)
+		print("Filled in end data")
+    }
 
     if(length(grep("02-29", dat[,1])) > 0){
 		dat <- dat[-c(grep("02-29", dat[,1])),]

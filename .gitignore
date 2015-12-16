@@ -1,3 +1,14 @@
-.Rproj.user
+*.RData
+*.swp
+*.swo
+*.tsv
+nwisGye/
 .Rhistory
-.RData
+notifyMe.r
+StreamNetwork.r
+routingFunctionsSaved.r
+MergingGrids/
+OldScripts/
+Outputs/
+NoteBooks/CreateGridlist.ipynb
+NoteBooks/GuageAnalysis.ipynb

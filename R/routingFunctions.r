@@ -75,6 +75,11 @@ RouteWater <- function(edges, catchments, Rsurf, Rsub, spinUpCycles=0, spinUpYea
 	vConvFactor <- 60*60*24/1000
     }
     
+	if(by == "month"){
+	# Set velocity conversion factor based on month of timestep
+		vConvFactor <- 60*60*24*daysInMonth[as.numeric(format(zoo::as.yearmon(rownames(Rsurf[timeStep,])), "%m"))]/1000
+	}
+
     # Set days in month to use for monthly-timestep velocity conversion factor
     daysInMonth <- c(31,28,31,30,31,30,31,31,30,31,30, 31)
 
@@ -109,10 +114,6 @@ RouteWater <- function(edges, catchments, Rsurf, Rsub, spinUpCycles=0, spinUpYea
 			# Start time to use for fucntion time-estimates
 
 
-			if(by == "month"){
-			# Set velocity conversion factor based on month of timestep
-				vConvFactor <- 60*60*24*daysInMonth[as.numeric(format(zoo::as.yearmon(rownames(Rsurf[timeStep,])), "%m"))]/1000
-			}
 
 			# Loop through edges in river network
 			for(i in 1:nrow(edges)){

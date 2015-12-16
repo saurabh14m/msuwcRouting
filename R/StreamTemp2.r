@@ -35,7 +35,7 @@
 #' @export
 
 # Routes surface and subsurface water through river network
-StreamTemp <- function(edges, catchments, RsurfSnow, RsurfNoSnow, Tair, simFlow, defaults=setupList, by="month", outputExtraVars=T, debugMode=T, runStart=1, runStop=NULL, K=.1, etaInt=10, outFile=NULL, prof=NULL){
+StreamTemp2 <- function(edges, catchments, RsurfSnow, RsurfNoSnow, Tair, simFlow, defaults=setupList, by="month", outputExtraVars=T, debugMode=T, runStart=1, runStop=NULL, K=.1, etaInt=10, outFile=NULL, prof=NULL){
 
 	if(!is.null(outFile)){
 		out <- file(outFile)
@@ -105,12 +105,13 @@ StreamTemp <- function(edges, catchments, RsurfSnow, RsurfNoSnow, Tair, simFlow,
 	}
 
 	# Set days in month to use for monthly-timestep velocity conversion factor
+	daysInMonth <- c(31,28,31,30,31,30,31,31,30,31,30, 31)
 	if(by == "month"){
 		##############Assumes start month is january
-		daysInMonth <- c(31,28,31,30,31,30,31,31,30,31,30, 31)
 		vConvFactor <- rep(daysInMonth*60*60*24/1000, length.out=timeLength)
 		velocities <- simFlow$v * vConvFactor
 	}
+
 	
 
     
@@ -136,6 +137,7 @@ StreamTemp <- function(edges, catchments, RsurfSnow, RsurfNoSnow, Tair, simFlow,
 		Rprof(prof, line.profiling=T, memory.profiling=T)
 	}
 
+
 	for(timeStep in 1:timeLength){
 
 
@@ -148,8 +150,8 @@ StreamTemp <- function(edges, catchments, RsurfSnow, RsurfNoSnow, Tair, simFlow,
 			ord <- orders[i]
 
 
-			
 			v <- velocities[timeStep, hydroID] ##m/s ##NEED to convert to m/month if month
+
 
 			len <- lengthKM[i]
 			
@@ -380,6 +382,7 @@ StreamTemp <- function(edges, catchments, RsurfSnow, RsurfNoSnow, Tair, simFlow,
 			))
 		}
     }
+
 
 	if(!is.null(prof)){
 		Rprof(NULL)
