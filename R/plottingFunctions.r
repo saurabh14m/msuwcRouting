@@ -7,10 +7,10 @@
 #
 #Sourced into streamNetwork.r file to do actual routing
 #
-makeHydrographs <- function(flowData, gaugeData, precip=NULL, spack=NULL, saveGraphs=F, plotTogether=F, interact=T, plotStats=T, plotSnowpack=F, plotPrecip=F, plotSeason=F, plotAnnual=F, dataMin=50){
+makeHydrographs <- function(flowData, gaugeData, var=1, precip=NULL, spack=NULL, saveGraphs=F, plotTogether=F, interact=T, plotStats=T, plotSnowpack=F, plotPrecip=F, plotSeason=F, plotAnnual=F, dataMin=50, yLabel="Flow (m3/s)"){
 
     
-    gauges <- gaugeData[names(gaugeData) %in% colnames(flowData$qOut)]
+    gauges <- gaugeData[names(gaugeData) %in% colnames(flowData[[var]])]
 
     if(length(gauges) >= 1){
 
@@ -26,9 +26,9 @@ makeHydrographs <- function(flowData, gaugeData, precip=NULL, spack=NULL, saveGr
 			}
 
 			if(timeStep == "month"){
-				dates <- zoo::as.Date(zoo::as.yearmon(rownames(flowData$qOut)))
+				dates <- zoo::as.Date(zoo::as.yearmon(rownames(flowData[[var]])))
 			} else {
-				dates <- zoo::as.Date(rownames(flowData$qOut))
+				dates <- zoo::as.Date(rownames(flowData[[var]]))
 			}
 			if(plotSeason){
 
@@ -36,7 +36,7 @@ makeHydrographs <- function(flowData, gaugeData, precip=NULL, spack=NULL, saveGr
 				for(season in 1:4)
 
 				print("Plotting Seasonal")
-				flow1 <- sumSeasonal(data.frame(flowData$qOut[, names(gauges)[i]]))
+				flow1 <- sumSeasonal(data.frame(flowData[[var]][, names(gauges)[i]]))
 				flow1 <- flow1[seq(season, to=length(flow1), by=4)]
 				gaugeFlow <- sumSeasonal(data.frame(gauges[[i]][,2], row.names=gauges[[i]][,1]))
 				gaugeFlow <<- gaugeFlow[seq(season, to=length(gaugeFlow), by=4)]
@@ -47,7 +47,7 @@ makeHydrographs <- function(flowData, gaugeData, precip=NULL, spack=NULL, saveGr
 				}
 
 				print("Plotting Seasonal")
-				plot(seq(zoo::as.Date(simStartDate), length.out=length(flow1), by="year"), flow1, type="l", lwd=2, cex=1.3, cex.lab=1.4,  cex.axis=1.3, col="red", xlab="",  ylab=expression(paste("Flow (m"^"3", "/s)")), ylim=c(0, max(c(max(flow1, na.rm=T), max(gaugeFlow, na.rm=T)))))
+				plot(seq(zoo::as.Date(simStartDate), length.out=length(flow1), by="year"), flow1, type="l", lwd=2, cex=1.3, cex.lab=1.4,  cex.axis=1.3, col="red", xlab="",  ylab=paste0(yLabel), ylim=c(0, max(c(max(flow1, na.rm=T), max(gaugeFlow, na.rm=T)))))
 				print("Guage data")
 
 				lines(seq(zoo::as.Date(simStartDate), length.out=length(gaugeFlow), by="year"), gaugeFlow, lwd=2)
@@ -60,7 +60,7 @@ makeHydrographs <- function(flowData, gaugeData, precip=NULL, spack=NULL, saveGr
 			} else if(plotAnnual){
 
 				print("Plotting Annual")
-				flow1 <- data.frame(flowData$qOut[, names(gauges)[i]])
+				flow1 <- data.frame(flowData[[var]][, names(gauges)[i]])
 				flow1 <- aggregate(flow1, list(substring(rownames(flow1), 4)), FUN=sum)
 				gaugeFlow <- data.frame(gauges[[i]][,2], row.names=gauges[[i]][,1])
 				gaugeFlow <- aggregate(gaugeFlow, list(substring(rownames(gaugeFlow), 4)), FUN=sum)
@@ -84,8 +84,8 @@ makeHydrographs <- function(flowData, gaugeData, precip=NULL, spack=NULL, saveGr
 				}
 
 				print("Plotting Monthly")
-				plot(dates, flowData$qOut[, names(gauges)[i]], type="l", col="red", lwd=2, cex=1.3, cex.lab=1.3, cex.axis=1.3, xlab="",  ylab=expression(paste("Flow (m"^"3", "/s)", sep="")))
-				#plot(dates, flowData$qOut[, names(gauges)[i]], type="l", col="red", lwd=2, cex=1.3, cex.lab=1.3, cex.axis=1.3, xlab="",  ylab="Flow (m3/s)")
+				plot(dates, flowData[[var]][, names(gauges)[i]], type="l", col="red", lwd=2, cex=1.3, cex.lab=1.3, cex.axis=1.3, xlab="",  ylab=paste0(yLabel))
+				#plot(dates, flowData[[var]][, names(gauges)[i]], type="l", col="red", lwd=2, cex=1.3, cex.lab=1.3, cex.axis=1.3, xlab="",  ylab="Flow (m3/s)")
 				lines(zoo::as.Date(gauges[[i]][,1]), gauges[[i]][,2], lwd=2)
 
 			}
@@ -102,7 +102,7 @@ makeHydrographs <- function(flowData, gaugeData, precip=NULL, spack=NULL, saveGr
 			abline(0, 0)
 			if(!plotSeason){
 				title(gaugesInBounds@data[gaugesInBounds@data[,8] == as.numeric(names(gauges[i])),"SITENAME"][1], cex.main=1.3)
-				legend("topleft", col=c("red", "black"), legend=c("Routed LPJ-Guess Runoff", "Gauge Data"), lty=1)
+				legend("topleft", col=c("red", "black"), legend=c("Modelled LPJ-Guess Data", "Observations"), lty=1)
 			}
 
 			if(plotStats){
@@ -148,12 +148,12 @@ makeHydrographs <- function(flowData, gaugeData, precip=NULL, spack=NULL, saveGr
 				}
 
 				if(timeStep == "month"){
-					dates <- zoo::as.Date(zoo::as.yearmon(rownames(flowData$qOut)))
+					dates <- zoo::as.Date(zoo::as.yearmon(rownames(flowData[[var]])))
 				} else {
-					dates <- zoo::as.Date(rownames(flowData$qOut))
+					dates <- zoo::as.Date(rownames(flowData[[var]]))
 				}
 
-				plot(dates, flowData$qOut[, edgeIdList[i]], type="l", col="red", xlab="",  ylab="Flow (m/s)")
+				plot(dates, flowData[[var]][, edgeIdList[i]], type="l", col="red", xlab="",  ylab="Flow (m/s)")
 				abline(0, 0)
 
 				title(paste("Edge", edgeIdList[i]))
@@ -268,35 +268,38 @@ plotHydroVar <- function(flowData, gauges, hydroVar, edgeIdList=NULL, saveGraphs
 
 
 
-CalcGOFs <- function(flowData, gauges){
+CalcGOFs <- function(flowData, gauges, var=1){
     
-    gauges <- gauges[names(gauges) %in% colnames(flowData$qOut)]
+    gauges <- gauges[names(gauges) %in% colnames(flowData[[var]])]
 
-    flowData$qOut <- flowData$qOut[1:nrow(gauges[[1]]), ]
+    flowData[[var]] <- flowData[[var]][1:nrow(gauges[[1]]), ]
      
-    if(nrow(flowData$qOut) != nrow(gauges[[1]])){
-	for(g in 1:length(gauges)){
-	    daysInMonth <- c(31,28,31,30,31,30,31,31,30,31,30,31)
-	    out <- c()
-	    for(row in 1:(nrow(flow$qOut)-1)){
-		print(row)
-		print(col)
-		out <- c(out, seq(flow$qOut[row, col], flow$qOut[row+1, col], length.out=daysInMonth[as.numeric(format(zoo::as.yearmon(rownames(flow$qOut)[row]), "%m"))]))
+    if(nrow(flowData[[var]]) != nrow(gauges[[1]])){
+		print("rows don't match!")
+		for(g in 1:length(gauges)){
+			daysInMonth <- c(31,28,31,30,31,30,31,31,30,31,30,31)
+			out <- c()
+			for(row in 1:(nrow(flow[[var]])-1)){
+				print(row)
+				print(col)
+				out <- c(out, seq(flow[[var]][row, col], flow[[var]][row+1, col], length.out=daysInMonth[as.numeric(format(zoo::as.yearmon(rownames(flow[[var]])[row]), "%m"))]))
 
-	    }
-		out <- c(out, seq(flow$qOut[row, col], 0, length.out=daysInMonth[as.numeric(format(zoo::as.yearmon(rownames(flow$qOut)[row]), "%m"))]+1))
-	}
+			}
+			out <- c(out, seq(flow[[var]][row, col], 0, length.out=daysInMonth[as.numeric(format(zoo::as.yearmon(rownames(flow[[var]])[row]), "%m"))]+1))
+		}
     }
 
     d <- c()
+
     for(i in 1:length(gauges)){
-	gaugeGof <- tryCatch(gof(flowData$qOut[, names(gauges)[i]], gauges[[i]][,2], na.rm=T), error=function(e){NULL})
-	if(is.null(gaugeGof)){
-	    next
-	}
-	d <- cbind(d,gof(flowData$qOut[, names(gauges)[i]], gauges[[i]][,2], na.rm=T))
+		gaugeGof <- tryCatch(gof(flowData[[var]][, names(gauges)[i]], gauges[[i]][,2], na.rm=T), error=function(e){NULL})
+		if(is.null(gaugeGof)){
+			next
+		}
+		d <- cbind(d,gof(flowData[[var]][, names(gauges)[i]], gauges[[i]][,2], na.rm=T))
     }
-    colnames(d) <- names(gauges)
+
+    #colnames(d) <- names(gauges)
     return(d)
 }
 
@@ -306,10 +309,10 @@ makeTaylorDiagrams <- function(flowData, gauges, saveGraphs=F, interact=F){
 	    png(paste(plotDir, "/",gsub(" ", "_", gsub("[[:punct:]]", "", gaugesInBounds@data[1, "SITENAME"])), ".png", sep=""))
 	}
 colors <- rainbow(length(gauges))
-	taylor.diagram(flowData$qOut[, names(gauges)[1]], gauges[[1]][,2], col=colors[1], pch=1)
+	taylor.diagram(flowData[[var]][, names(gauges)[1]], gauges[[1]][,2], col=colors[1], pch=1)
 	for(j in 2:length(gauges)){
 	    print("plotting point")
-	    taylor.diagram(flowData$qOut[, names(gauges)[j]], gauges[[j]][,2], add=T, col=colors[j], pch=length(gauges)%%25)
+	    taylor.diagram(flowData[[var]][, names(gauges)[j]], gauges[[j]][,2], add=T, col=colors[j], pch=length(gauges)%%25)
 	}
 
 	#title(@data[gaugesInBounds@data[,8] == as.numeric(names(gauges[i])),"SITENAME"])

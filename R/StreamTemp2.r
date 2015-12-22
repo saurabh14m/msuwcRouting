@@ -72,27 +72,6 @@ StreamTempCpp <- function(edges, catchments, RsurfSnow, RsurfNoSnow, Tair, simFl
     timeLength <- length(runStart:runStop)
     # Create seed matrix to use for storing data in results
 
-
-    seedMatrix <- matrix(0, nrow=timeLength, ncol=ncol(RsurfSnow),
-        dimnames=list(rownames(RsurfSnow), edges[, idField]))
-
-
-
-    results <- list(
-        Twater = seedMatrix,
-        TwaterLocal = seedMatrix,
-        TwaterLocalWarmed = seedMatrix,
-        TwaterQin = seedMatrix,
-        TwaterSriv = seedMatrix,
-        kRsQsub= seedMatrix,
-        kQIn = seedMatrix,
-        kQsRiv = seedMatrix
-    )
-
-	tracemem(results)
-
-    rm(seedMatrix)
-
 	Tsnow <- .1
 
     if(by == "day"){
@@ -113,7 +92,6 @@ StreamTempCpp <- function(edges, catchments, RsurfSnow, RsurfNoSnow, Tair, simFl
 	orders <- edges[, defaults$edgeOrderField] 
 	ids <- edges[, idField]
 
-	stepsLooped <- 0
 	start <- as.numeric(format(Sys.time(), "%s"))
 
 	parentList <- lapply(edges[,idField], function(x) {which(edges[,nextDownField] == x)})
@@ -130,11 +108,12 @@ StreamTempCpp <- function(edges, catchments, RsurfSnow, RsurfNoSnow, Tair, simFl
 
 	#print(paste0("Type: ", typeof(), " Class: ", class()))
 	lapply(ls(), function(x) {print(paste0(x," - Type: ", typeof(get(x)), " Class: ", class(get(x))))})
+	lapply(ls(), function(x) {print(paste0(x," - is.null?: ", is.null(get(x))))})
 
 	temp <- streamTempLoop(timeLength=timeLength, edgeIDs=ids, orders=orders, velocities=velocities, lengths=lengthKM, RsurfSnow=as.matrix(RsurfSnow), RsurfNoSnow=as.matrix(RsurfNoSnow), flowqSub=as.matrix(simFlow$qSub), flowqOut=as.matrix(simFlow$qOut), flowqIn=as.matrix(simFlow$qIn), flowsRiv=as.matrix(simFlow$sRiv), annualTmean=annualTmean, by=by, parentList=parentList, K=K, Tair=as.matrix(Tair))
 
-	#colnames(temp) <- colnames(RsurfSnow)
-	#rownames(temp) <- rownames(RsurfSnow)
+	colnames(temp[[1]]) <- colnames(RsurfSnow)
+	rownames(temp[[1]]) <- rownames(RsurfSnow)
 
 
 	if(!is.null(prof)){

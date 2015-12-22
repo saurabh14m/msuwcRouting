@@ -9,7 +9,7 @@ List streamTempLoop(int timeLength, CharacterVector edgeIDs, IntegerVector order
 	NumericMatrix TwUpstream(timeLength, edgeIDs.size());
 	NumericMatrix TwLocal(timeLength, edgeIDs.size());
 
-	double stepsLooped = 0;
+	int stepsLooped = 0;
 
 	for(int timeStep=0; timeStep < timeLength; timeStep++){
 
